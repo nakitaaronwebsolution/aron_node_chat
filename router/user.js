@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router()
 const userController = require("../controller/user")
-
-
+const middleware = require("../helper/middleware")
 const path = require("path")
 const multer = require("multer")
 
@@ -22,6 +21,6 @@ const upload = multer({
 })
 router.post("/userRegister",upload.single('image'),userController.userRegister)
 router.post("/userLogin",userController.UserLogin)
-router.post("/uploadImage",upload.single('image'),userController.uploadImage)
+router.post("/uploadImage",middleware.validateUser,upload.single('image'),userController.uploadImage)
 
 module.exports = router
