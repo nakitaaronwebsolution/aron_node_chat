@@ -33,6 +33,10 @@ email:{
    type : String, 
    required:true,
  },
+ country_code:{
+   type : String,
+   require:true
+ },
 status :{
     type :Boolean,
     required : true
