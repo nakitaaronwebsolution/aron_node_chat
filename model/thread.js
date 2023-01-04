@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const messageSchema = new mongoose.Schema({
+const threadSchema = new mongoose.Schema({
     message: {
         type: String,
     },
@@ -13,23 +13,20 @@ const messageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "user"
     },
-    chatId: {
+    messageId : {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "chat"
-    },
-    thread_count :{
-        type : Number,
-        default : 0
+        ref: "message"
     },
     attachement: {
         type: String,
     },
     status: {
-        type: Boolean
+        type: Boolean,
+        default : true
     },
 
 });
 
-const message = mongoose.model("message", messageSchema);
+const thread = mongoose.model("thread", threadSchema);
 
-module.exports = message;
+module.exports = thread;

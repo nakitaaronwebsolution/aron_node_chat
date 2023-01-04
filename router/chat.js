@@ -4,7 +4,8 @@ const chatController = require("../controller/chat")
 const middleware = require("../helper/middleware")
 
 const path = require("path")
-const multer = require("multer")
+const multer = require("multer");
+const { route } = require("./user");
 
 
 const storage = multer.diskStorage({
@@ -23,6 +24,8 @@ const upload = multer({
 router.post("/createChat",middleware.validateUser,chatController.createChat)
 router.get("/getAllChat",middleware.validateUser,chatController.getAllChat)
 router.post("/createMessage",middleware.validateUser,upload.single('attachement'),chatController.createMessage)
-router.post("/getChats",middleware.validateUser,chatController.getMessage)
+router.post("/getMessage",middleware.validateUser,chatController.getMessage)
 router.post("/search",middleware.validateUser,chatController.search)
+router.post("/reply_to_thread",middleware.validateUser,upload.single('attachement'),chatController.reply_to_thread)
+router.post("/get_thread",middleware.validateUser,chatController.get_thread)
 module.exports = router
