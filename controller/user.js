@@ -19,7 +19,7 @@ module.exports = {
 
       const hash = await securePassword(password)
       let image = null;
-      if (req.file) image = 'localhost:4000/images/' + req.file.filename
+      if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
       const Email = await userModel.findOne({ email: email })
       if (Email) {
         return res.send(faildResponse("Email Already Exist!"))
@@ -67,7 +67,7 @@ module.exports = {
             const token = jwt.sign({
               id: result._id,
               email: email
-            }, process.env.TOKEN_SECRET, { expiresIn: "7d" })
+            },process.env.TOKEN_SECRET, { expiresIn: "7d" })
 
             console.log(token, "token______________")
 
