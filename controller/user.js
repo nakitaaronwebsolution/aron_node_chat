@@ -41,7 +41,7 @@ module.exports = {
     } catch (error) {
       return res.send(faildResponse(error))
     }
-  },
+  }, 
   async userLogin(req, res, next) {
     try {
       const { email, password } = req.body
