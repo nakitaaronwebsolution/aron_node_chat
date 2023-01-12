@@ -16,7 +16,6 @@ module.exports = {
         let image = null;
       if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
         const { username, gender, DOB, password, phoneNumber, email, country_code } = req.body
-
         const hash = await securePassword(password)
         const Email = await userModel.findOne({ email: email })
         if (Email) {
