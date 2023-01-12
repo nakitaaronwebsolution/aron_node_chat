@@ -20,7 +20,7 @@ module.exports = {
         const Email = await userModel.findOne({ email: email })
         if (Email) {
           return res.send(faildResponse("Email Already Exist!"))
-        }
+        } 
     
         const result = await userModel.create({
           username: username,
