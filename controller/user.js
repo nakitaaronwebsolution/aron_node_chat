@@ -9,24 +9,20 @@ const jwt = require("jsonwebtoken")
 module.exports = {
   async userRegister(req, res, next) {
     try {
-
-      ImageUpload(req, res, async function (err, resp) {
-        if (err) {
-          return console.log('errrrr', err)
-        }
         let validate = validateRequest(req.body, ['username', 'DOB', 'phoneNumber', 'email', 'password', 'gender', 'country_code'])
         if (validate && !validate.status && validate.msg) {
           return res.send(faildResponse(validate.msg))
         }
+        let image = null;
+      if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
         const { username, gender, DOB, password, phoneNumber, email, country_code } = req.body
 
         const hash = await securePassword(password)
-        let image = null;
-        if (req.file) image = req.file.location
         const Email = await userModel.findOne({ email: email })
         if (Email) {
           return res.send(faildResponse("Email Already Exist!"))
         }
+    
         const result = await userModel.create({
           username: username,
           gender: gender,
@@ -43,7 +39,6 @@ module.exports = {
         } else {
           return res.send(successResponse(".......userRegister Successfully", result))
         }
-      })
     } catch (error) {
       return res.send(faildResponse(error))
     }
@@ -88,22 +83,14 @@ module.exports = {
     async uploadImage(req, res, next) {
       try {
         const tokenUser = req.decode
-        ImageUpload(req, res, async function (err, resp) {
-          if (err) {
-            return console.log('errrrr', err)
-          }
-          if (!req.file) {
-            return res.send(faildResponse("File Not exist"));
-          }
-
-          const image = req.file.location
+        let image = null;
+      if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
           let result = await userModel.findOneAndUpdate({ _id: tokenUser._id }, { image: image }, { new: true })
           if (!result) {
             return res.send(faildResponse("this User is Not exist"));
           } else {
             return res.send(successResponse("image updated successfully", result));
           }
-        })
       } catch (error) {
         return res.send(faildResponse(error))
       }

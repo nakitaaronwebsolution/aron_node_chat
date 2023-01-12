@@ -2,10 +2,6 @@ const userModel = require("../model/user")
 const chatModel = require("../model/chat")
 const messageModel = require("../model/message")
 const threadModel = require("../model/thread")
-var Objectid = require('objectid')
-const upload = require('../helper/awsimageupload');
-
-const ImageUploadMany = upload.any();
 const { faildResponse, successResponse, validateRequest } = require("../helper/helper");
 const bcrypt = require("bcrypt")
 
@@ -182,37 +178,32 @@ module.exports = {
     async createMessage(req, res, next) {
         try {
             const tokenUser = req.decode
-            ImageUploadMany(req, res, async function (err, resp) {
-                if (err) {
-                    return console.log('errrrr', err)
-                }
-                const { message, chatId } = req.body
 
-                let image = null;
-                if (req.file) image = req.file.location
-                let validate = validateRequest(req.body, ['message', 'chatId'])
-                if (validate && !validate.status && validate.msg) {
-                    return res.send(faildResponse(validate.msg))
+            let validate = validateRequest(req.body, ['message', 'chatId'])
+            if (validate && !validate.status && validate.msg) {
+                return res.send(faildResponse(validate.msg))
+            }
+            let image = null;
+            if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
+            const ChatExist = await chatModel.findOne({ _id: chatId })
+            if (!ChatExist) {
+                return res.send(faildResponse("chat Id not Exist"))
+            }
+            messageModel.create({
+                message: message,
+                from_userId: tokenUser._id,
+                attachement: image,
+                chatId: ChatExist._id,
+                status: true
+            }, function (err, result) {
+                if (err) {
+                    return res.send(faildResponse(err))
                 }
-                const ChatExist = await chatModel.findOne({ _id: chatId })
-                if (!ChatExist) {
-                    return res.send(faildResponse("chat Id not Exist"))
+                else {
+                    return res.send(successResponse("message create Successfully", result))
                 }
-                messageModel.create({
-                    message: message,
-                    from_userId: tokenUser._id,
-                    attachement: image,
-                    chatId: ChatExist._id,
-                    status: true
-                }, function (err, result) {
-                    if (err) {
-                        return res.send(faildResponse(err))
-                    }
-                    else {
-                        return res.send(successResponse("message create Successfully", result))
-                    }
-                })
             })
+
         } catch (error) {
             console.log("error ====> ", error)
             return res.send(faildResponse(error))
@@ -254,7 +245,7 @@ module.exports = {
             if (!messageExist) {
                 return res.send(faildResponse("message not Exist"))
             }
-            messageModel.findOneAndUpdate({_id:messageExist._id},req.body,{new:true }, function (err, result) {
+            messageModel.findOneAndUpdate({ _id: messageExist._id }, req.body, { new: true }, function (err, result) {
                 if (err) {
                     return res.send(faildResponse(err))
                 }
@@ -313,36 +304,32 @@ module.exports = {
     async reply_to_thread(req, res, next) {
         try {
             const tokenUser = req.decode
-            ImageUploadMany(req, res, async function (err, resp) {
-                if (err) {
-                    return console.log('errrrr', err)
-                }
-                const { message, messageId } = req.body
-                let image = null;
-                if (req.file) image = req.file.location
-                let validate = validateRequest(req.body, ['message', 'messageId'])
-                if (validate && !validate.status && validate.msg) {
-                    return res.send(faildResponse(validate.msg))
-                }
-                const messageExist = await messageModel.findOne({ _id: messageId })
-                if (!messageExist) {
-                    return res.send(faildResponse("message Id not Exist"))
-                }
-                await messageModel.findOneAndUpdate({ _id: messageId }, { thread_count: Number(messageExist.thread_count || 0) + 1 })
-                threadModel.create({
-                    message: message,
-                    from_userId: tokenUser._id,
-                    attachement: image,
-                    messageId: messageExist._id,
+            const { message, messageId } = req.body
+            let validate = validateRequest(req.body, ['message', 'messageId'])
+            if (validate && !validate.status && validate.msg) {
+                return res.send(faildResponse(validate.msg))
+            }
+            let image = null;
+            if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
 
-                }, function (err, result) {
-                    if (err) {
-                        return res.send(faildResponse(err))
-                    }
-                    else {
-                        return res.send(successResponse("thread message create Successfully", result))
-                    }
-                })
+            const messageExist = await messageModel.findOne({ _id: messageId })
+            if (!messageExist) {
+                return res.send(faildResponse("message Id not Exist"))
+            }
+            await messageModel.findOneAndUpdate({ _id: messageId }, { thread_count: Number(messageExist.thread_count || 0) + 1 })
+            threadModel.create({
+                message: message,
+                from_userId: tokenUser._id,
+                attachement: image,
+                messageId: messageExist._id,
+
+            }, function (err, result) {
+                if (err) {
+                    return res.send(faildResponse(err))
+                }
+                else {
+                    return res.send(successResponse("thread message create Successfully", result))
+                }
             })
         } catch (error) {
             console.log("error ====> ", error)
@@ -374,29 +361,29 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async update_thread(req, res, next)  {
-     try{
-        const { threadId } = req.body
-        let validate = validateRequest(req.body, ['threadId'])
-        if (validate && !validate.status && validate.msg) {
-            return res.send(faildResponse(validate.msg))
-        }
-        const threadExist = await threadModel.findOne({ _id: threadId })
-        if (!threadExist) {
-            return res.send(faildResponse("thread message Id not Exist"))
-        }
-        threadModel.findOneAndUpdate({_id :threadExist._id},req.body,{new:true }, function (err, result) {
-            if (err) {
-                return res.send(faildResponse(err))
+    async update_thread(req, res, next) {
+        try {
+            const { threadId } = req.body
+            let validate = validateRequest(req.body, ['threadId'])
+            if (validate && !validate.status && validate.msg) {
+                return res.send(faildResponse(validate.msg))
             }
-            else {
-                return res.send(successResponse("thread message update Successfully", result))
+            const threadExist = await threadModel.findOne({ _id: threadId })
+            if (!threadExist) {
+                return res.send(faildResponse("thread message Id not Exist"))
             }
-        })
-     }catch(error){
-        console.log("errr==========",error);
-        return res.send(faildResponse(error))
-     }
+            threadModel.findOneAndUpdate({ _id: threadExist._id }, req.body, { new: true }, function (err, result) {
+                if (err) {
+                    return res.send(faildResponse(err))
+                }
+                else {
+                    return res.send(successResponse("thread message update Successfully", result))
+                }
+            })
+        } catch (error) {
+            console.log("errr==========", error);
+            return res.send(faildResponse(error))
+        }
     },
     async delete_thread(req, res, next) {
         try {
