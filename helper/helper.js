@@ -1,5 +1,4 @@
 const bcrypt = require("bcrypt")
-const jwt = require("jsonwebtoken")
 module.exports = {
     faildResponse: function (msg) {
       return {
@@ -37,15 +36,6 @@ module.exports = {
         return response
       }
     },
-    successResponseWithCount: function (res, msg, data, count) {
-      return {
-        statusCode: 200,
-        data: data,
-        success: true,
-        message: msg,
-        count: count
-      };
-  },
     securePassword : function (password){
       const passwordHash =  bcrypt.hash(password, 10);
       return passwordHash;
@@ -54,7 +44,6 @@ module.exports = {
       const compassword =  bcrypt.compare(password, passwordHash);
       return compassword;
     },
-    
   }
   
  

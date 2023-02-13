@@ -1,5 +1,5 @@
 {
-  "name": "erp",
+  "name": "nodechat",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,24 +11,23 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.1292.0",
+    "aws-sdk": "^2.441.0",
     "bcrypt": "^5.1.0",
     "body-parser": "^1.20.1",
-    "chai": "^4.3.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "generate-password": "^1.7.0",
+    "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.0",
-    "mocha": "^10.2.0",
-    "moment": "^2.29.4",
-    "mongoose": "^6.8.3",
+    "module_name": "^1.0.0",
+    "mongoose": "^6.8.2",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1",
-    "multer-s3": "^3.0.1",
-    "node-notifier": "^10.0.1",
-    "nodemailer": "^6.9.1",
+    "multer": "^1.4.1",
+    "multer-s3": "^2.9.0",
+    "nodemailer": "^6.8.0",
     "nodemon": "^2.0.20",
-    "objectid": "^3.2.1"
+    "objectid": "^3.2.1",
+    "socket.io": "^4.5.4",
+    "static": "^2.0.0"
   }
 }

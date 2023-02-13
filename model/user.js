@@ -1,20 +1,18 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const UserSchema = mongoose.Schema({
-    name:{ type: String, require: true, default: "" },
-    image:{ type: String, default: "" },
-    email: { type: String, require: true , default: "" },
-    password: { type: String, require: true , default: "" },
-    phone: { type: String, require: true, default: ""  },
-    permission: { type: String },
-    employeId: { type: String ,/*require: true*/},
-    teamId:{ type: mongoose.Schema.ObjectId, ref: 'team' },
-    role: { type: String, default: "user", enum: ["hr","user","admin","sumAdmin","manager", "teamLead"] },
-    token: { type: String },
-    is_active:  { type: Boolean, default: false },
-    is_deleted:  { type: Boolean, default: false }
-}, {
-    timestamps: true
+const userSchema = new mongoose.Schema({
+    username :{type : String,required : true},
+    gender: {type : String,enum : ["Female","Male"],required: true,},
+    DOB : {type : String,required: true,   },
+    phoneNumber :{type : String,required : true,},
+    email:{type : String,unique : true,required:true,},
+    password :{type : String,required:true,},
+    image :{type : String, required:true,},
+    country_code:{type : String,require:true},
+    status :{type :Boolean,required : true},
+    token :{type : String}
 });
 
-module.exports = mongoose.model('User', UserSchema);
+const user = mongoose.model("user", userSchema);
+
+module.exports = user;
