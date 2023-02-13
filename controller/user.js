@@ -1,51 +1,54 @@
-const userModel = require("../model/user")
-const { faildResponse, successResponse, validateRequest, securePassword, comparePassword } = require("../helper/helper");
-const bcrypt = require("bcrypt")
-const nodemailer = require("nodemailer")
-const upload = require('../helper/awsimageupload');
-const ImageUpload = upload.single("image");
-
+const { userModel, leaveModel, attendanceModel, teamModel, projectModel } = require('../model/index');
 const jwt = require("jsonwebtoken")
+const { successResponse, faildResponse, validateRequest, securePassword, comparePassword, successResponseWithCount } = require("../helper/helper");
+const mongoose = require("mongoose")
 module.exports = {
-  async userRegister(req, res, next) {
+  async register(req, res) {
     try {
-        let validate = validateRequest(req.body, ['username', 'DOB', 'phoneNumber', 'email', 'password', 'gender', 'country_code'])
-        if (validate && !validate.status && validate.msg) {
-          return res.send(faildResponse(validate.msg))
-        }
-        const { username, gender, DOB, password, phoneNumber, email, country_code } = req.body
-        const hash = await securePassword(password)
-        let image = null;
-      if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
-        const Email = await userModel.findOne({ email: email })
-        if (Email) {
-          return res.send(faildResponse("Email Already Exist!"))
-        } 
-    
-        const result = await userModel.create({
-          username: username,
-          gender: gender,
-          DOB: DOB,
-          phoneNumber: phoneNumber,
-          email: email,
-          password: hash,
-          image: image,
-          country_code: country_code,
-          status: true
-        })
-        if (!result) {
-          return res.send(faildResponse("something went wrong"))
-        } else {
-          return res.send(successResponse(".......userRegister Successfully", result))
-        }
+
+      let validate = validateRequest(req.body, ['name', 'password', 'email', 'phone', 'role'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      const { name,/* employeId,*/ role, password, phone, email } = req.body
+      let image = null;
+      if (req.file) image = 'http://localhost:4003/images/' + req.file.filename
+      const hash = await securePassword(password)
+      const Email = await userModel.findOne({ email: email })
+      if (Email) {
+        return res.send(faildResponse("Email Already Exist!"))
+      }
+      // let employeIdExist = await User.findOne({ employeId: req.body.employeId })
+      // if (employeIdExist) {
+      //     return (errorResponse(res, "Employe Id Already exist."))
+      // }
+
+      // Create a new User
+      const result = await userModel.create({
+        // employeId: req.body.employeId,
+        name: name,
+        password: hash,
+        email: email,
+        image: image,
+        phone: phone,
+        role: role,
+        is_active: true,
+        is_verified: true,
+        is_deleted: false
+      })// Save user in the database
+      if (!result) {
+        return res.send(faildResponse("something went wrong"))
+      } else {
+        return res.send(successResponse(".......userRegister Successfully", result))
+      }
     } catch (error) {
+      console.log("err====", error)
       return res.send(faildResponse(error))
     }
-  }, 
-  async userLogin(req, res, next) {
+  },
+  async login(req, res) {
     try {
-      const { email, password } = req.body
-      let validate = validateRequest(req.body, ['email', 'password'])
+      const { password, email } = req.body
+      let validate = validateRequest(req.body, ['password', 'email'])
       if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
       console.log(validate.msg)
       const result = await userModel.findOne({ email: email })
@@ -65,202 +68,43 @@ module.exports = {
             }, process.env.TOKEN_SECRET, { expiresIn: "7d" })
             console.log(token, "token______________")
             let newUser = await userModel.findOneAndUpdate({ email: email }, { token: token }, { new: true })
-
             return res.send(successResponse("login successfully", { token: token, user: newUser }))
           }
         } else {
           return res.send(faildResponse("Invalid Cred"))
         }
       }
-
     } catch (error) {
-      console.log(error)
+      console.log("err=====", error)
       return res.send(faildResponse(error))
     }
-
   },
-    async uploadImage(req, res, next) {
-      try {
-        const tokenUser = req.decode
-        let image = null;
-      if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
-          let result = await userModel.findOneAndUpdate({ _id: tokenUser._id }, { image: image }, { new: true })
-          if (!result) {
-            return res.send(faildResponse("this User is Not exist"));
-          } else {
-            return res.send(successResponse("image updated successfully", result));
-          }
-      } catch (error) {
-        return res.send(faildResponse(error))
-      }
-
-    },
-  async changePassword(req, res, next) {
+  async uploadImage(req, res) {
     try {
       const tokenUser = req.decode
-      const { newPassword, confirmPassword } = req.body
-      let validate = validateRequest(req.body, ['newPassword', 'confirmPassword'])
-
-      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
-      console.log(validate.msg)
-      if (newPassword !== confirmPassword) {
-        return res.send(faildResponse("password not same"))
+      let image = null;
+      if (req.file) image = 'http://localhost:4003/images/' + req.file.filename
+      let result = await userModel.findOneAndUpdate({ _id: tokenUser._id }, { image: image }, { new: true })
+      if (!result) {
+        return res.send(faildResponse("this User is Not exist"));
+      } else {
+        return res.send(successResponse("image updated successfully", result));
       }
-      const hash = await securePassword(confirmPassword)
-
-      userModel.findOneAndUpdate({ _id: tokenUser._id }, { password: hash }, { new: true }, function (err, result) {
-        if (err) {
-          return res.send(faildResponse(err))
-        }
-        else {
-          return res.send(successResponse(" change password  Successfully", result))
-        }
-      })
     } catch (error) {
+      console.log("err=====", error)
       return res.send(faildResponse(error))
     }
   },
-  async forgotPassword(req, res, next) {
-    try {
-      const { email } = req.body
-      let validate = validateRequest(req.body, ['email'])
-      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
-      console.log(validate.msg)
-      const userExist = await userModel.findOne({ email: email })
-      if (!userExist) {
-        return res.send(faildResponse("user not exist"))
-      }
-      const link = `http://localhost:3000/reset-password/${userExist.token}`
-      var transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: "nakitaaronwebsolutions@gmail.com",
-          pass: "wslfwyqhiekvzpvj",
-        },
-      });
-      let emailHtml = `
-<!doctype html>
-<html lang="en-US">
-<head>
-    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
-    <title>Reset Password Email Template</title>
-    <meta name="description" content="Reset Password Email Template.">
-    <style type="text/css">
-        a:hover {text-decoration: underline !important;}
-    </style>
-</head>
-<body marginheight="0" topmargin="0" marginwidth="0" style="margin: 0px; background-color: #F2F3F8;" leftmargin="0">
-    <!--100% body table-->
-    <table cellspacing="0" border="0" cellpadding="0" width="100%" bgcolor="#F2F3F8"
-        style="@import url(https://fonts.googleapis.com/css?family=Rubik:300,400,500,700%7COpen+Sans:300,400,600,700); font-family: 'Open Sans', sans-serif;">
-        <tr>
-            <td>
-                <table style="background-color: #F2F3F8; max-width:670px;  margin:0 auto;" width="100%" border="0"
-                    align="center" cellpadding="0" cellspacing="0">
-                    <tr>
-                        <td style="height:80px;">&nbsp;</td>
-                    </tr>
-                    <tr>
-                        <td style="height:20px;">&nbsp;</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0"
-                                style="max-width:670px;background:#fff; border-radius:3px; text-align:center;-webkit-box-shadow:0 6px 18px 0 rgba(0,0,0,.06);-moz-box-shadow:0 6px 18px 0 rgba(0,0,0,.06);box-shadow:0 6px 18px 0 rgba(0,0,0,.06);">
-                                <tr>
-                                    <td style="height:40px;">&nbsp;</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:0 35px;">
-                                        <h1 style="color:#1e1e2d; font-weight:500; margin:0;font-size:32px;font-family:'Rubik',sans-serif;">You have
-                                            requested to reset your password</h1>
-                                        <span
-                                            style="display:inline-block; vertical-align:middle; margin:29px 0 26px; border-bottom:1px solid #CECECE; width:100px;"></span>
-                                        <p style="color:#455056; font-size:15px;line-height:24px; margin:0;">
-                                            This is A unique link to reset your
-                                            password. To reset your password, click the
-                                            following link.
-                                        </p>
-                                        <a href="${link}"
-                                            style="background:#20e277;text-decoration:none !important; font-weight:500; margin-top:35px; color:#fff;text-transform:uppercase; font-size:14px;padding:10px 24px;display:inline-block;border-radius:50px;">Reset
-                                            Password</a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="height:40px;">&nbsp;</td>
-                                </tr>
-                            </table>
-                        </td>
-                    <tr>
-                        <td style="height:20px;">&nbsp;</td>
-                    </tr>
-                    <tr>
-                        <td style="height:80px;">&nbsp;</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-    <!--/100% body table-->
-</body>
-</html>`
-      var mailOptions = {
-        from: "nakitaaronwebsolutions@gmail.com",
-        to: email,
-        subject: "Password Reset",
-        html: emailHtml,
-      };
-      transporter.sendMail(mailOptions, function (error, result) {
-        if (error) {
-
-          console.log("Email error sent: " + JSON.stringify(error));
-          return res.send(faildResponse(error));
-        } else {
-
-          console.log("Email result sent: " + JSON.stringify(result));
-          return res.send(successResponse("send mail successfully ", result))
-        }
-      });
-      console.log(link);
-    } catch (error) {
-      return res.send(faildResponse(error))
-    }
-  },
-  async reset_password(req, res, next) {
-    try {
-      const { email, token, new_password } = req.body
-      let validate = validateRequest(req.body, ['email', 'new_password', 'token'])
-      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
-      console.log(validate.msg)
-      const userExist = await userModel.findOne({ email: email, token: token })
-      if (!userExist) {
-        return res.send(faildResponse("user not exist"))
-      }
-      const hash = await securePassword(new_password)
-      userModel.findOneAndUpdate({ email: email }, { password: hash }, { new: true }, function (err, result) {
-        if (err) {
-          return res.send(faildResponse(err))
-        }
-        else {
-          return res.send(successResponse(" reset password  Successfully", result))
-        }
-      })
-    } catch (error) {
-      return res.send(faildResponse(error))
-    }
-  },
-  async update_user(req, res, next) {
+  async update_user(req, res) {
     try {
       const tokenUser = req.decode
-      const { username, gender, DOB, phoneNumber, email, country_code } = req.body
-
+      const { name, password, phone, email, role } = req.body
       userModel.findOneAndUpdate({ _id: tokenUser._id }, {
-        username: username,
-        gender: gender,
-        DOB: DOB,
-        phoneNumber: phoneNumber,
+        name: name,
+        password: password,
+        phone: phone,
         email: email,
-        country_code: country_code,
+        role: role,
       }, { new: true }, function (err, result) {
         if (err) {
           return res.send(faildResponse(err))
@@ -273,19 +117,308 @@ module.exports = {
       return res.send(faildResponse(error))
     }
   },
-  async delete_user(req, res, next) {
+  async changePassword(req, res) {
     try {
       const tokenUser = req.decode
-      userModel.findOneAndDelete({ _id: tokenUser._id }, { new: true }, function (err, result) {
+      const { newPassword, confirmPassword } = req.body
+      let validate = validateRequest(req.body, ['newPassword', 'confirmPassword'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      if (newPassword !== confirmPassword) {
+        return res.send(faildResponse("password not same"))
+      }
+      const hash = await securePassword(confirmPassword)
+
+      userModel.findOneAndUpdate({ _id: tokenUser._id }, { password: hash }, { new: true }, function (err, result) {
         if (err) {
           return res.send(faildResponse(err))
         }
         else {
-          return res.send(successResponse(" delete user Successfully", result))
+          return res.send(successResponse("change password  Successfully", result))
         }
       })
     } catch (error) {
+      console.log("err======", error)
+      return res.send(faildResponse(error))
+    }
+  },
+  async findOne(req, res) {
+    try {
+      const tokenUser = req.decode
+      userModel.findOne({ _id: tokenUser._id }, function (err, result) {
+        if (err) {
+          return res.send(faildResponse(err))
+        }
+        else {
+          return res.send(successResponse("User  found ", result))
+        }
+      })
+    } catch (error) {
+      console.log("err====", error)
+      return res.send(faildResponse(error))
+    }
+  },
+  async delete(req, res) {
+    try {
+      const tokenUser = req.decode
+      const result = await userModel.findOneAndRemove({ _id: tokenUser._id })
+      if (!result) {
+        return res.send(faildResponse(`user not found with id ${tokenUser._id}`))
+      }
+      else {
+        return res.send(successResponse("User Deleted Successfully", {}))
+      }
+    } catch (err) {
+      console.log("err===", err)
       return res.send(faildResponse(err))
     }
   },
+  async requestLeave(req, res) {
+    try {
+      const tokenUser = req.decode
+      const { leaveType, fromDate, toDate, numberOfDays, reason } = req.body
+      let validate = validateRequest(req.body, ['leaveType', 'fromDate', 'toDate', 'numberOfDays', 'reason'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      const leave = await leaveModel.create({
+        employeName: tokenUser.name,
+        employeId: tokenUser._id,
+        leaveType: leaveType,
+        fromDate: fromDate,
+        toDate: toDate,
+        numberOfDays: Number(numberOfDays || 1),
+        reason: reason,
+        userId: tokenUser._id,
+        status: 'Pending'
+      });
+      if (!leave) {
+        return res.send(faildResponse("something went wrong"))
+      } else {
+        return res.send(successResponse("Leave Create Success", leave))
+      }
+    } catch (err) {
+      console.log("err===", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async checkInAttendance(req, res) {
+    try {
+      let data = req.body
+      let validate = validateRequest(req.body, ['userId'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      var validUser = mongoose.Types.ObjectId.isValid(req.body.userId);
+      if (validUser == false) {
+        return res.send(faildResponse("invalid userId"))
+      }
+      const userExist = await userModel.findOne({ _id: req.body.userId })
+      if (!userExist) {
+        return res.send(faildResponse("user not exist "))
+      }
+      let todatyData = new Date()
+      const getDate = todatyData.getDate()
+      const getMonth = todatyData.getMonth()
+      const getFullYear = todatyData.getFullYear()
+      const toDay = `${getDate}/${getMonth}/${getFullYear}`
+      let findQuerry = {
+        user: data.userId,
+        date: toDay
+      }
+      let updateQuerry = {
+        cretatedBy: req.decode._id,
+        user: data.userId,
+        checkInTime: todatyData,
+        date: toDay,
+        status: true
+      }
+      attendanceModel.findOneAndUpdate(findQuerry, updateQuerry, { new: true, upsert: true }, async function (err, result) {
+        if (err) {
+          return res.send(faildResponse("Something went wrong while Update team Member."))
+        }
+        if (result) {
+          return res.send(successResponse("Check In Success", result))
+        }
+      })
+    } catch (err) {
+      console.log("err=====", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async checkOutAttendance(req, res) {
+    try {
+      let data = req.body
+      let validate = validateRequest(req.body, ['userId'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      var validUser = mongoose.Types.ObjectId.isValid(req.body.userId);
+      if (validUser == false) {
+        return res.send(faildResponse("invalid userId."))
+      }
+      const userExist = await userModel.findOne({ _id: req.body.userId })
+      if (!userExist) {
+        return res.send(faildResponse("user not exist "))
+      }
+      let todatyData = new Date()
+      const getDate = todatyData.getDate()
+      const getMonth = todatyData.getMonth()
+      const getFullYear = todatyData.getFullYear()
+      const toDay = `${getDate}/${getMonth}/${getFullYear}`
+      let findQuerry = {
+        user: data.userId,
+      }
+      let attendanceExist = await attendanceModel.findOne({user:data.userId})
+      console.log(attendanceExist)
+      if (!attendanceExist) {
+        return res.send(faildResponse("attendance not exist."))
+      }
+      const seconds = Math.floor((new Date(todatyData).getTime() - new Date(attendanceExist.checkInTime).getTime()) / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = minutes / 60;
+      let minutesOnly = 0
+      let hourlyOnly = 0
+      if (minutes > 0) {
+        let alldata = hours.toString().split(".")
+        hourlyOnly = alldata[0]
+        minutesOnly = Math.floor(alldata[1] * 60)
+      }
+      let updateQuerry = {
+        cretatedBy: req.decode._id,
+        user: data.userId,
+        checkOutTime: todatyData,
+        date: toDay,
+        totalHr: hourlyOnly,
+        totalMin: minutesOnly.toString().slice(0, 2),
+        status: data.status || true
+      }
+      if (req.body.extraLeave) {
+        updateQuerry.extraLeave = req.body.extraLeave
+      }
+      attendanceModel.findOneAndUpdate(findQuerry, updateQuerry, { new: true, upsert: true }, async function (err, result) {
+        if (err) {
+          return res.send(faildResponse("Something went wrong while Update team Member."))
+        }
+        if (result) {
+          return res.send(successResponse("Check In Success", result))
+        }
+      })
+    } catch (err) {
+      console.log("err====", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async getAttendances(req, res) {
+    try {
+      let { userId } = req.body
+      let validate = validateRequest(req.body, ['userId'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      var validUser = mongoose.Types.ObjectId.isValid(userId);
+      if (validUser == false) {
+        return res.send(faildResponse("invalid userId."))
+      }
+      const userExist = await userModel.findOne({ _id: userId })
+      if (!userExist) {
+        return res.send(faildResponse("user not exist"))
+      }
+      let findQuerry = {
+        user: userId
+      }
+      attendanceModel.find(findQuerry, async function (err, result) {
+        if (err) {
+          return res.send(faildResponse("Something went wrong while Update team Member."))
+        }
+        if (result) {
+          return res.send(successResponse("Attendances In Success", result))
+        }
+      })
+    } catch (err) {
+      console.log("err=====", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async checkLeaveStatus(req, res) {
+    try {
+      let data = req.body
+      let validate = validateRequest(req.body, ['shortBy', 'page', 'size', 'order'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      let userCount = await leaveModel.aggregate([
+        { $group: { _id: null, myCount: { $sum: 1 } } }
+      ])
+      const result = await leaveModel.aggregate([
+        { $skip: ((Number(data.page) - 1) * Number(data.size)) },
+        { $sort: { [`${data.shortBy}`]: Number(data.order) } }
+      ])
+      if (!result) {
+        console.log("err ====> ", err)
+        return res.send(faildResponse("Something went wrong while getting list of Leave."))
+      } else {
+        return res.send(successResponseWithCount("Leave All Data", result, userCount[0].myCount))
+      }
+    } catch (err) {
+      console.log("err========", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async checkproject(req, res) {
+    try {
+      const tokenUser = req.decode
+      const result = await projectModel.find({ team: { $all: [tokenUser._id] } })
+      if (!result) {
+        return res.send(faildResponse("not found"))
+      } else {
+        return res.send(successResponse("get project history success", result))
+      }
+    } catch (err) {
+      console.log("err========", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async update_Leave(req, res) {
+    try {
+      const tokenUser = req.decode
+      const { leaveId, leaveType, fromDate, toDate, numberOfDays, reason } = req.body
+      let validate = validateRequest(req.body, ['leaveId'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+
+      leaveModel.findOneAndUpdate({ _id: leaveId, employeId: tokenUser._id }, {
+        leaveType: leaveType,
+        fromDate: fromDate,
+        toDate: toDate,
+        numberOfDays: numberOfDays,
+        reason: reason
+      }, { new: true }, function (err, result) {
+        if (err) {
+          return res.send(faildResponse(err))
+        }
+        else {
+          console.log("result======",res)
+          return res.send(successResponse(" update leave Successfully", result))
+        }
+      })
+    } catch (err) {
+      console.log("err=======", err)
+      return res.send(faildResponse(err))
+    }
+  },
+  async delete_Leave(req,res){
+    try{
+      const {leaveId} = req.body
+      let validate = validateRequest(req.body, ['leaveId'])
+      if (validate && !validate.status && validate.msg) return res.send(faildResponse(validate.msg))
+      console.log(validate.msg)
+      leaveModel.findOneAndDelete({ _id: leaveId }, { new: true }, function (err, result) {
+        if (err) {
+          return res.send(faildResponse(err))
+        }
+        else {
+          return res.send(successResponse("delete leave Successfully", {}))
+        }
+      })
+    }catch(err){
+      console.log("err=====",err)
+      return res.send(faildResponse(err))
+    }
+  }
 }

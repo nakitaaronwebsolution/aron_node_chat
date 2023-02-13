@@ -1,0 +1,39 @@
+[{
+  "_id": {
+    "$oid": "63e4eb73330c0132faad00b6"
+  },
+  "title": "life",
+  "image": "http://localhost:4003/images/image_1675951214090.jpg",
+  "price": "1000",
+  "status": "true",
+  "createdAt": {
+    "$date": {
+      "$numberLong": "1675946867996"
+    }
+  },
+  "updatedAt": {
+    "$date": {
+      "$numberLong": "1675951214102"
+    }
+  },
+  "__v": 0
+},{
+  "_id": {
+    "$oid": "63e4eb7d330c0132faad00b9"
+  },
+  "title": "\\\\\\\\\\",
+  "image": "http://localhost:4002/images/image_1675946877507.png",
+  "price": "400",
+  "status": "true",
+  "createdAt": {
+    "$date": {
+      "$numberLong": "1675946877512"
+    }
+  },
+  "updatedAt": {
+    "$date": {
+      "$numberLong": "1675946877512"
+    }
+  },
+  "__v": 0
+}]

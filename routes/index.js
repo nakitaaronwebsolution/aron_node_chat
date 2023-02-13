@@ -1,0 +1,13 @@
+const express = require("express")
+const router = express.Router()
+const userRouter = require("./user")
+router.use("/user",  userRouter)
+const adminRouter = require("./admin")
+router.use("/admin", adminRouter)
+const hrRouter = require("./hr")
+router.use("/hr", hrRouter)
+// const projectRouter = require("./project")
+// router.use("/project", projectRouter)
+const projectManagerRouter = require("./projectManager")
+router.use("/projectManager", projectManagerRouter)
+module.exports = router
