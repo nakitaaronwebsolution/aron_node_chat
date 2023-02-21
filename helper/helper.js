@@ -1,15 +1,14 @@
 const bcrypt = require("bcrypt")
 module.exports = {
-    faildResponse: function (msg) {
+    faildResponse: function (msg,status) {
       return {
         message: msg,
-        status: false,
-        statusCode: 500,
+        status: 400,
       }
     },
     successResponse: function (msg, data) {
       return {
-        statusCode: 200,
+        status: 200,
         message: msg,
         data: data,
       };

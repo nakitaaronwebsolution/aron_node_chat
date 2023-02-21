@@ -2,12 +2,11 @@ const userModel = require("../model/user")
 const chatModel = require("../model/chat")
 const messageModel = require("../model/message")
 const threadModel = require("../model/thread")
+
 const { faildResponse, successResponse, validateRequest } = require("../helper/helper");
-const bcrypt = require("bcrypt")
-
-
+var Objectid = require('objectid')
 module.exports = {
-    async createChat(req, res, next) {
+    async createChat(req, res) {
         try {
             const tokenUser = req.decode
             const { users, type, discription, name, chat_type } = req.body
@@ -25,13 +24,14 @@ module.exports = {
                 if (!userExist) {
                     return res.send(faildResponse("user not exist"))
                 }
-                const ChatExist = await chatModel.findOne({ type: "one_to_one", users: { $all: [userExist._id, tokenUser._id] } })
+                const ChatExist = await chatModel.findOne({ type: "one_to_one", users: { $all: [userExist._id] } })
                 if (ChatExist) {
                     return res.send(successResponse("Chat Already Exist", ChatExist))
                 }
+
                 const result = await chatModel.create({
                     type: type,
-                    users: [userExist._id, tokenUser._id],
+                    users: userExist._id,
                     created_by: tokenUser._id
                 })
                 if (!result) {
@@ -51,7 +51,6 @@ module.exports = {
                     return res.send(successResponse("group name  Already Exist", ChatExist))
                 }
                 const result = await chatModel.create({
-                    users: [tokenUser._id],
                     chat_type: chat_type,
                     type: type,
                     discription: discription,
@@ -69,11 +68,30 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async getAllChat(req, res, next) {
+    async getChat(req, res) {
+        try {
+            const tokenUser = req.decode
+            const userExist = await userModel.findOne({username:req.body.username})
+            const groups = await chatModel.find({ type: "group", chat_type: "public" })
+            const individules = await chatModel.find({ type: "one_to_one", users: { $in: [tokenUser._id] } }).populate('users', 'username image')
+            const user = await userModel.findOne({_id:userExist._id}).select({_id :1,username:1,image:1})
+            console.log(user)
+            individules.push(user)
+            let result = {
+                groups: groups,
+                individules: individules
+            }
+            return res.send(successResponse("Chat Get Successfully", result))
+        } catch (error) {
+            console.log(error)
+            return res.send(faildResponse(error))
+        }
+    },
+    async getAllChat(req, res) {
         try {
             const tokenUser = req.decode
             const groups = await chatModel.find({ type: "group", chat_type: "public" })
-            const individules = await chatModel.find({ type: "one_to_one", users: { $in: [tokenUser._id] } })
+            const individules = await (await chatModel.find({ type: "one_to_one", users: { $in: [tokenUser._id] } })).populate('users', 'username image')
             let result = {
                 groups: groups,
                 individules: individules
@@ -81,10 +99,10 @@ module.exports = {
             return res.send(successResponse("Chat Lists Get Successfully", result))
         } catch (error) {
             console.log(error)
-            next(error)
+            return res.send(faildResponse(error))
         }
     },
-    async update_Chat(req, res, next) {
+    async update_Chat(req, res) {
         try {
 
             const { chatId, discription, name, chat_type } = req.body
@@ -117,7 +135,7 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async add_user(req, res, next) {
+    async add_user(req, res) {
         try {
             const tokenUser = req.decode
             const { chatId, users } = req.body
@@ -175,66 +193,66 @@ module.exports = {
             next(error)
         }
     },
-    async createMessage(req, res, next) {
+    async createMessage(req, res) {
         try {
             const tokenUser = req.decode
-
-            let validate = validateRequest(req.body, ['message', 'chatId'])
+            const { sender, reciever, message } = req.body
+            let validate = validateRequest(req.body, ['message', 'sender','reciever'])
             if (validate && !validate.status && validate.msg) {
                 return res.send(faildResponse(validate.msg))
             }
             let image = null;
             if (req.file) image = 'http://localhost:4000/images/' + req.file.filename
-            const ChatExist = await chatModel.findOne({ _id: chatId })
-            if (!ChatExist) {
-                return res.send(faildResponse("chat Id not Exist"))
+            const userExist = await userModel.findOne({ _id: sender, _id: reciever })
+            if (!userExist) {
+                return res.send(faildResponse("user not Exist"))
             }
             messageModel.create({
                 message: message,
-                from_userId: tokenUser._id,
+                users:[ sender,reciever],
                 attachement: image,
-                chatId: ChatExist._id,
+                created_by:tokenUser._id,
                 status: true
-            }, function (err, result) {
+            },function (err, result) {
                 if (err) {
-                    return res.send(faildResponse(err))
+                    return res.send(faildResponse(err,404))
                 }
                 else {
                     return res.send(successResponse("message create Successfully", result))
                 }
             })
-
         } catch (error) {
             console.log("error ====> ", error)
             return res.send(faildResponse(error))
         }
     },
-    async getMessage(req, res, next) {
+    async getMessage(req, res) {
         try {
-            const { chatId, page } = req.body
-            let validate = validateRequest(req.body, ['chatId', 'page'])
+            const {sender,reciever, page } = req.body
+            const tokenUser = req.decode
+            let validate = validateRequest(req.body, ['sender','reciever', 'page'])
             if (validate && !validate.status && validate.msg) {
                 return res.send(faildResponse(validate.msg))
             }
-            const ChatExist = await chatModel.findOne({ _id: chatId })
-            if (!ChatExist) {
-                return res.send(faildResponse("chat Id not Exist"))
-            }
-            messageModel.find({}, function (err, result) {
+            messageModel.find({
+                users: {
+                    $all: [sender, reciever],
+                  },
+              }, function (err, result) { 
                 if (err) {
                     return res.send(faildResponse(err))
                 }
                 else {
                     return res.send(successResponse("message get Successfully", result))
                 }
-            }).skip(Number(page - 1) * 5).limit(5).sort({ send_date: -1 }).populate('from_userId', 'username image')
+            }).skip(Number(page - 1) * 5).limit(5).sort({ send_date: -1 })
 
         } catch (error) {
             console.log("error ====> ", error)
             return res.send(faildResponse(error))
         }
     },
-    async update_message(req, res, next) {
+    async update_message(req, res) {
         try {
             const { messageId } = req.body
             let validate = validateRequest(req.body, ['messageId'])
@@ -281,7 +299,7 @@ module.exports = {
             next(error)
         }
     },
-    async search(req, res, next) {
+    async search(req, res) {
         try {
             const { username } = req.body
             let validate = validateRequest(req.body, ['username'])
@@ -293,7 +311,7 @@ module.exports = {
                     return res.send(faildResponse(err))
                 }
                 else {
-                    return res.send(successResponse(" user search  Successfully", result))
+                    return res.send(successResponse("user search  Successfully", result))
                 }
             })
         } catch (error) {
@@ -301,7 +319,7 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async reply_to_thread(req, res, next) {
+    async reply_to_thread(req, res) {
         try {
             const tokenUser = req.decode
             const { message, messageId } = req.body
@@ -336,7 +354,7 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async get_thread(req, res, next) {
+    async get_thread(req, res) {
         try {
             const { messageId } = req.body
             let validate = validateRequest(req.body, ['messageId'])
@@ -361,7 +379,7 @@ module.exports = {
             return res.send(faildResponse(error))
         }
     },
-    async update_thread(req, res, next) {
+    async update_thread(req, res) {
         try {
             const { threadId } = req.body
             let validate = validateRequest(req.body, ['threadId'])
