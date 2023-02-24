@@ -11,6 +11,7 @@ app.use(morgan())
 app.use(cors())
 app.use(express.urlencoded({ extended: false }))
 app.use('/images', express.static(__dirname + '/uploads'));
+
 const router = require("./router/index")
 app.use("/v1", router);
 app.use('/', require("./router/index"))
@@ -21,11 +22,13 @@ const MessageSchema = require("./model/message")
 var io = require('socket.io')(server);
 var path = require('path');
 const notifier = require('node-notifier');
+
 app.use(express.static(path.join(__dirname)));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 var name;
+
 io.on('connection', (socket) => {
   console.log('new user connected', socket.id);
   socket.on('joining msg', async (username) => {

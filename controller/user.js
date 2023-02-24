@@ -78,6 +78,20 @@ module.exports = {
     }
 
   },
+  async get_user(req, res) {
+    try {
+      const tokenUser = req.decode
+      const result = await userModel.findOne({_id :tokenUser._id})
+      if (!result) {
+        return res.send(faildResponse("something went wrong"))
+      } else {
+        return res.send(successResponse("User get Data", result))
+      }
+    } catch (err) {
+      console.log("errr======", err)
+      return res.send(err)
+    }
+  },
   async getAll_user(req, res) {
     try {
       const result = await userModel.find({})
